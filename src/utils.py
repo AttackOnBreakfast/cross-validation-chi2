@@ -14,10 +14,10 @@ def generate_data(x: np.ndarray, truth_fn, noise_level: float, random_state=None
     y_truth = truth_fn(x)
     noise = rng.normal(loc=0.0, scale=noise_level * y_truth)
     y_noisy = y_truth + noise
-    y_noisy = np.clip(y_noisy, 0, None)  # ensure non-negative
-    return y_noisy, y_truth, noise
+    y_noisy = np.clip(y_noisy, 0, None)
+    return y_noisy, y_truth
 
-def rescale(x: np.ndarray, new_min: float, new_max: float) -> np.ndarray:
+def rescale(x: np.ndarray, new_min: float = -1, new_max: float = 1) -> np.ndarray:
     """
     Rescale x to the interval [new_min, new_max].
     """
