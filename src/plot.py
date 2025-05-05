@@ -2,7 +2,7 @@
 # src/plot.py
 # -----------------------------
 import matplotlib.pyplot as plt
-from src.truth import f_truth
+from src.truth_function import f_truth
 from src.fitting import fit_chebyshev, eval_chebyshev
 from src.data import rescale
 import numpy as np

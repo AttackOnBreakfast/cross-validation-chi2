@@ -2,7 +2,7 @@
 # src/data.py
 # -----------------------------
 import numpy as np
-from src.truth import f_truth
+from src.truth_function import f_truth
 
 def generate_dataset_pair(n_points, sigma, seed):
     np.random.seed(seed)
