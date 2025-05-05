@@ -1,0 +1,4 @@
+### src/truth_function.py
+
+def f_truth(x):
+    return 3 * (x + 0.2)**1.2 * (1.2 - x)**1.2 * (1 + 2.3 * x)
