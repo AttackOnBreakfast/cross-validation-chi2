@@ -3,9 +3,8 @@
 # -----------------------------
 import numpy as np
 
-def truth_function(x: np.ndarray) -> np.ndarray:
+def f_truth(x: np.ndarray) -> np.ndarray:
     """
-    Defines the ground truth function f_truth(x).
-    For example, a 7th-degree polynomial.
+    Defines the theoretical 'truth' function for the model.
     """
-    return 2 + x - 0.5 * x**2 + 0.1 * x**3 - 0.05 * x**4 + 0.02 * x**5 - 0.005 * x**6 + 0.001 * x**7
+    return 3 + 0.5 * x - 0.2 * x**2 + 0.03 * x**3 - 0.001 * x**4
