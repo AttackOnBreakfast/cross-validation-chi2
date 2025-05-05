@@ -23,8 +23,8 @@ x_data = np.linspace(x_range[0], x_range[1], num_points)
 rng.shuffle(x_data)
 x_A, x_B = np.array_split(x_data, 2)
 
-y_A, y_A_truth = generate_data(f_truth, x_A, noise_level, random_state=0)
-y_B, y_B_truth = generate_data(f_truth, x_B, noise_level, random_state=1)
+y_A, y_A_truth = generate_data(x_A, f_truth, noise_level, random_state=0)
+y_B, y_B_truth = generate_data(x_B, f_truth, noise_level, random_state=1)
 
 # Chebyshev basis fitting with rescaled x values
 x_A_scaled = rescale(x_A)
