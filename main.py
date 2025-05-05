@@ -1,9 +1,9 @@
 # -----------------------------
 # main.py
 # -----------------------------
-from src.truth_function import truth_function
+from src.truth_function import f_truth
 from src.utils import generate_data, rescale
-from src.plot import plot_chi2_vs_model_complexity
+from src.plot import plot_fit_and_chi2
 from numpy.polynomial.chebyshev import chebfit, chebval
 import numpy as np
 import warnings
@@ -17,7 +17,7 @@ x_range = (0, 10)
 max_params = 20
 
 # Generate synthetic dataset
-x_data, y_data, y_errors = generate_data(truth_function, num_points, x_range)
+x_data, y_data, y_errors = generate_data(f_truth, num_points, x_range)
 
 # Split data into two sets
 split_index = int(0.7 * num_points)
