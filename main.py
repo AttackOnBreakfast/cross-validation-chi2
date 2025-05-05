@@ -2,47 +2,44 @@
 # main.py
 # -----------------------------
 import numpy as np
-from src.truth_function import f_truth
-from src.utils import generate_data, rescale
-from src.plot import plot_chi2_vs_model_complexity
-from numpy.polynomial.chebyshev import chebfit, chebval
-import warnings
-
-warnings.simplefilter('ignore', np.RankWarning)
+from src.utils import generate_data
+from src.fitting import fit_polynomial, compute_chi2
+from src.theory import chi2_theory_A, chi2_theory_B
+from src.plot import plot_results
+from src.data import generate_dataset_pair, generate_fit_sample
 
 # Parameters
-num_points = 100
-x_range = (-0.2, 1.2)
-noise_level = 0.2
-max_degree = 15
-random_seed = 42
+n_points = 300
+sigma = 0.3
+max_params = 30
+n_trials = 1
 
-# Generate datasets A and B
-rng = np.random.default_rng(random_seed)
-x_data = np.linspace(x_range[0], x_range[1], num_points)
-rng.shuffle(x_data)
-x_A, x_B = np.array_split(x_data, 2)
+# Chi2 accumulators
+chi2_A_accum = np.zeros(max_params)
+chi2_B_accum = np.zeros(max_params)
 
-y_A, y_A_truth = generate_data(x_A, f_truth, noise_level, random_state=0)
-y_B, y_B_truth = generate_data(x_B, f_truth, noise_level, random_state=1)
+# Sample for fit plot
+x_fit_sample, y_fit_sample = generate_data(n_points, sigma, seed=42)
 
-# Chebyshev basis fitting with rescaled x values
-x_A_scaled = rescale(x_A)
-x_B_scaled = rescale(x_B)
+# Cross-validation loop
+for seed in range(n_trials):
+    x_A, y_A = generate_data(n_points, sigma, seed=seed)
+    x_B, y_B = generate_data(n_points, sigma, seed=seed + 1000)
 
-degrees = np.arange(1, max_degree + 1)
-chi2_A = []
-chi2_B = []
+    for m in range(1, max_params + 1):
+        p = fit_polynomial(x_A, y_A, m)
+        chi2_a = compute_chi2(y_A, p(x_A), sigma)
+        chi2_b = compute_chi2(y_B, p(x_B), sigma)
+        chi2_A_accum[m - 1] += chi2_a
+        chi2_B_accum[m - 1] += chi2_b
 
-for deg in degrees:
-    coefs = chebfit(x_A_scaled, y_A, deg)
-    y_fit_A = chebval(x_A_scaled, coefs)
-    y_fit_B = chebval(rescale(x_B), coefs)
+# Averages and theory curves
+degrees = np.arange(1, max_params + 1)
+chi2_A_avg = chi2_A_accum / n_trials
+chi2_B_avg = chi2_B_accum / n_trials
+chi2_A_theory = chi2_theory_A(n_points, degrees)
+chi2_B_theory = chi2_theory_B(n_points, degrees)
 
-    chi2_A_val = np.sum(((y_A - y_fit_A) / (noise_level * y_A_truth))**2) / len(y_A)
-    chi2_B_val = np.sum(((y_B - y_fit_B) / (noise_level * y_B_truth))**2) / len(y_B)
-
-    chi2_A.append(chi2_A_val)
-    chi2_B.append(chi2_B_val)
-
-plot_chi2_vs_model_complexity(degrees, chi2_A, chi2_B)
+# Plot everything
+plot_results((x_fit_sample, y_fit_sample), max_params, chi2_A_avg, chi2_B_avg,
+             chi2_A_theory, chi2_B_theory)

@@ -1,7 +1,10 @@
 # -----------------------------
 # src/theory.py
 # -----------------------------
-def theoretical_chi2(n_points, degrees):
-    chi2_A = n_points - degrees
-    chi2_B = n_points + degrees
-    return chi2_A, chi2_B
+import numpy as np
+
+def chi2_theory_A(n_points, degrees):
+    return n_points - degrees
+
+def chi2_theory_B(n_points, degrees):
+    return n_points + degrees

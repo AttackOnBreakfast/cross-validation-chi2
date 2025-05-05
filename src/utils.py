@@ -2,25 +2,10 @@
 # src/utils.py
 # -----------------------------
 import numpy as np
-from typing import Tuple
+from src.truth_function import f_truth
 
-def generate_data(x: np.ndarray, truth_fn, noise_level: float, random_state=None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Generate synthetic data around a truth function with noise.
-    The noise is proportional to the function value.
-    Returns (noisy data, true values, noise used).
-    """
-    rng = np.random.default_rng(random_state)
-    y_truth = truth_fn(x)
-    noise = rng.normal(loc=0.0, scale=noise_level * y_truth)
-    y_noisy = y_truth + noise
-    y_noisy = np.clip(y_noisy, 0, None)
-    return y_noisy, y_truth
-
-def rescale(x: np.ndarray, new_min: float = -1, new_max: float = 1) -> np.ndarray:
-    """
-    Rescale x to the interval [new_min, new_max].
-    """
-    old_min = np.min(x)
-    old_max = np.max(x)
-    return new_min + (x - old_min) * (new_max - new_min) / (old_max - old_min)
+def generate_data(n_points=300, sigma=0.4, seed=0):
+    np.random.seed(seed)
+    x = np.sort(np.random.rand(n_points))
+    y = f_truth(x) + sigma * np.random.randn(n_points)
+    return x, y
