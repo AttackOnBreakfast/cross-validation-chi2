@@ -1,53 +1,29 @@
 # -----------------------------
 # main.py
 # -----------------------------
+# main.py
+
+import numpy as np
+import matplotlib.pyplot as plt
 from src.truth_function import f_truth
 from src.utils import generate_data, rescale
-from src.plot import plot_fit_and_chi2
-from numpy.polynomial.chebyshev import chebfit, chebval
-import numpy as np
-import warnings
-
-# Suppress RankWarnings from Chebyshev fit instability (optional)
-warnings.simplefilter('ignore', np.RankWarning)
+from src.plot import plot_chi2_vs_model_complexity
 
 # Parameters
-num_points = 1000
+num_points = 500
 x_range = (0, 10)
-max_params = 20
+noise_level = 0.1
+max_params = 15
+random_state = 42
 
-# Generate synthetic dataset
-x_data, y_data, y_errors = generate_data(f_truth, num_points, x_range)
+# Generate x and data
+x_data = np.linspace(*x_range, num_points)
+y_data, y_truth, y_errors = generate_data(x_data, f_truth, noise_level=noise_level, random_state=random_state)
 
-# Split data into two sets
+# Split into two datasets
 split_index = int(0.7 * num_points)
-x_A, x_B = x_data[:split_index], x_data[split_index:]
-y_A, y_B = y_data[:split_index], y_data[split_index:]
-y_err_A, y_err_B = y_errors[:split_index], y_errors[split_index:]
+x_A, y_A, err_A = x_data[:split_index], y_data[:split_index], y_errors[:split_index]
+x_B, y_B, err_B = x_data[split_index:], y_data[split_index:], y_errors[split_index:]
 
-# Initialize chi-squared results
-chi2_A_on_A = []
-chi2_B_on_A = []
-
-# Loop over model complexities (Chebyshev degrees)
-for m in range(1, max_params + 1):
-    # Rescale x to [-1, 1] for Chebyshev stability
-    x_A_rescaled = rescale(x_A)
-    x_B_rescaled = rescale(x_B)
-
-    # Fit model to dataset A using Chebyshev
-    coefs = chebfit(x_A_rescaled, y_A, m)
-
-    # Evaluate on A and B
-    y_fit_A = chebval(x_A_rescaled, coefs)
-    y_fit_B = chebval(x_B_rescaled, coefs)
-
-    # Compute chi-squared
-    chi2_A = np.sum(((y_A - y_fit_A) / y_err_A) ** 2)
-    chi2_B = np.sum(((y_B - y_fit_B) / y_err_B) ** 2)
-
-    chi2_A_on_A.append(chi2_A)
-    chi2_B_on_A.append(chi2_B)
-
-# Plot results
-plot_chi2_vs_model_complexity(chi2_A_on_A, chi2_B_on_A, max_params)
+# Run cross-validation and plot
+plot_chi2_vs_model_complexity(x_A, y_A, err_A, x_B, y_B, err_B, max_params)
