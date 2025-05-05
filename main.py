@@ -74,7 +74,7 @@ plt.scatter(degrees, chi2_B_avg, color='red', s=20)
 plt.xlabel("Model Complexity (Polynomial Degree)")
 plt.ylabel(r'$\chi^2$ Value (log scale)')
 plt.yscale('log')
-plt.title("Cross-validated $\chi^2$ vs Model Complexity")
+plt.title(r"Cross-validated $\chi^2$ vs Model Complexity")
 plt.legend()
 plt.grid(True, which="both", linestyle='--')
 
