@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from src.truth_function import f_truth
 from src.data import generate_dataset_pair
-from src.theory import theoretical_chi2_curves
+from src.theory import theoretical_chi2
 from src.utils import smooth_curve
 
 # Parameters
@@ -39,7 +39,7 @@ chi2_B_avg = chi2_B_accum / n_trials
 
 # Theory curves
 degrees = np.arange(1, max_params + 1)
-chi2_A_th, chi2_B_th = theoretical_chi2_curves(n_points, degrees)
+chi2_A_theory, chi2_B_theory = theoretical_chi2(n_points, degrees)
 
 # Smooth
 x_dense = np.linspace(1, max_params, 500)
