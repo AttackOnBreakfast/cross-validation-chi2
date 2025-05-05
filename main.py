@@ -45,8 +45,8 @@ chi2_A_theory, chi2_B_theory = theoretical_chi2(n_points, degrees)
 x_dense = np.linspace(1, max_params, 500)
 chi2_A_smooth = smooth_curve(degrees, chi2_A_avg, x_dense)
 chi2_B_smooth = smooth_curve(degrees, chi2_B_avg, x_dense)
-chi2_A_th_smooth = smooth_curve(degrees, chi2_A_th, x_dense, kind='linear')
-chi2_B_th_smooth = smooth_curve(degrees, chi2_B_th, x_dense, kind='linear')
+chi2_A_th_smooth = smooth_curve(degrees, chi2_A_theory, x_dense, kind='linear')
+chi2_B_th_smooth = smooth_curve(degrees, chi2_B_theory, x_dense, kind='linear')
 
 # Plot
 plt.figure(figsize=(12, 6))
