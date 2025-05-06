@@ -2,11 +2,14 @@
 # main.py
 # -----------------------------
 import numpy as np
+import warnings
 from src.utils import generate_data
 from src.fitting import fit_polynomial, compute_chi2
 from src.theory import chi2_theory_A, chi2_theory_B
 from src.plot import plot_results
-from src.data import generate_dataset_pair, generate_fit_sample
+
+# Suppress RankWarnings for high-degree polynomial fits
+warnings.simplefilter('ignore', np.RankWarning)
 
 # Parameters
 n_points = 300
@@ -41,5 +44,11 @@ chi2_A_theory = chi2_theory_A(n_points, degrees)
 chi2_B_theory = chi2_theory_B(n_points, degrees)
 
 # Plot everything
-plot_results((x_fit_sample, y_fit_sample), max_params, chi2_A_avg, chi2_B_avg,
-             chi2_A_theory, chi2_B_theory)
+plot_results(
+    sample=(x_fit_sample, y_fit_sample),
+    max_degree=max_params,
+    chi2_A=chi2_A_avg,
+    chi2_B=chi2_B_avg,
+    chi2_A_theory=chi2_A_theory,
+    chi2_B_theory=chi2_B_theory
+)
