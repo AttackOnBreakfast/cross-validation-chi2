@@ -1,0 +1,57 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+
+\begin{document}
+
+\section*{Variance of Cross-Validated $\chi^2$}
+
+To understand the uncertainty associated with the empirical $\chi^2$ values for both the training and test datasets, we compute the \textbf{empirical variance} across repeated trials, and compare it to the \textbf{theoretical variance} predicted by chi-squared statistics.
+
+\subsection*{Empirical Variance Calculation}
+
+For each model complexity (polynomial degree) $m$, and each of the $T$ random trials, we compute:
+
+\[
+\chi^2_A^{(t)} = \frac{1}{\sigma^2} \sum_{i=1}^N (y_{A,i}^{(t)} - \hat{y}_{A,i}^{(t)})^2, \quad t = 1, 2, \dots, T
+\]
+
+Then the sample mean and variance are:
+
+\[
+\overline{\chi^2_A}(m) = \frac{1}{T} \sum_{t=1}^T \chi^2_A^{(t)}(m)
+\]
+\[
+\mathrm{Var}(\chi^2_A)(m) = \frac{1}{T} \sum_{t=1}^T \left( \chi^2_A^{(t)}(m) - \overline{\chi^2_A}(m) \right)^2
+\]
+
+The same formulas hold for the test dataset $\chi^2_B$.
+
+\subsection*{Theoretical Variance of Chi-Squared Distribution}
+
+If the model is correct and the residuals are Gaussian, then the quantity $\chi^2$ follows a chi-squared distribution with $\nu$ degrees of freedom. The mean and variance of a chi-squared random variable with $\nu$ degrees of freedom are:
+
+\[
+\mathbb{E}[\chi^2] = \nu, \quad \mathrm{Var}[\chi^2] = 2\nu
+\]
+
+We apply this to estimate the theoretical variance for both datasets:
+
+\begin{align*}
+\mathrm{Var}_{\text{theory}}(\chi^2_A) &= 2(N - m) \\
+\mathrm{Var}_{\text{theory}}(\chi^2_B) &= 2(N + m)
+\end{align*}
+
+Here, $N$ is the number of data points in each dataset, and $m$ is the number of fit parameters (i.e., polynomial degree + 1).
+
+\subsection*{Comparison and Visualization}
+
+In the plot:
+\begin{itemize}
+    \item The empirical standard deviations $\sqrt{\mathrm{Var}(\chi^2_A)}$ and $\sqrt{\mathrm{Var}(\chi^2_B)}$ are shown as vertical error bars.
+    \item The theoretical standard deviations $\sqrt{2(N - m)}$ and $\sqrt{2(N + m)}$ are shown as shaded bands centered on the average $\chi^2$ values.
+\end{itemize}
+
+This comparison helps evaluate whether the observed variability in $\chi^2$ aligns with expectations under the assumption of Gaussian noise and a well-calibrated model.
+
+\end{document}
