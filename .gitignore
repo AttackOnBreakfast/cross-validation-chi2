@@ -1,21 +1,24 @@
-# Bytecode and logs
+# Ignore Python bytecode and cache
 __pycache__/
 *.py[cod]
+
+# Ignore logs and temp files
 *.log
+*.tmp
 
-# Jupyter checkpoints
-.ipynb_checkpoints/
-
-# OS
-.DS_Store
-
-# Conda
-environment.yml
-
-# Ignore all CSV and TeX files except specific results
+# Ignore generic CSV and TeX, except in results/
 *.csv
 *.tex
+!results/*.csv
+!results/*.tex
 
-# Allow tracked results
-!results/chi2_dispersion_variance.csv
-!results/chi2_table.tex
+# Ignore Jupyter artifacts
+.ipynb_checkpoints/
+
+# macOS system file
+.DS_Store
+
+# Conda/venv/environment files
+environment.yml
+*.env
+.venv/
