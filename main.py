@@ -2,6 +2,7 @@
 # main.py
 # -----------------------------
 import numpy as np
+import pandas as pd
 import warnings
 from src.utils import generate_data
 from src.fitting import fit_polynomial, compute_chi2
@@ -66,3 +67,25 @@ plot_results(
     chi2_A_var_theory=chi2_A_var_theory,
     chi2_B_var_theory=chi2_B_var_theory
 )
+
+# Save CSV
+df = pd.DataFrame({
+    "Degree": degrees,
+    "Chi2_A_std": chi2_A_std,
+    "Chi2_A_var_theory": chi2_A_var_theory,
+    "Chi2_B_std": chi2_B_std,
+    "Chi2_B_var_theory": chi2_B_var_theory
+})
+df.to_csv("results/chi2_dispersion_variance.csv", index=False)
+
+# Save LaTeX table
+with open("results/chi2_table.tex", "w") as f:
+    f.write("\\begin{tabular}{c c c c c}\n")
+    f.write("\\toprule\n")
+    f.write("Degree & $\\sigma_A$ & $\\mathrm{Var}_A^{\\text{th}}$ & $\\sigma_B$ & $\\mathrm{Var}_B^{\\text{th}}$ \\\\\n")
+    f.write("\\midrule\n")
+    for i, m in enumerate(degrees):
+        row = f"{m} & {chi2_A_std[i]:.3f} & {chi2_A_var_theory[i]:.1f} & {chi2_B_std[i]:.3f} & {chi2_B_var_theory[i]:.1f} \\\\\n"
+        f.write(row)
+    f.write("\\bottomrule\n")
+    f.write("\\end{tabular}\n")

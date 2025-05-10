@@ -1,0 +1,17 @@
+# Bytecode and logs
+__pycache__/
+*.py[cod]
+*.log
+
+# Data files
+*.csv
+*.tex
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+
+# Conda
+environment.yml
