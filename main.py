@@ -1,6 +1,7 @@
 # -----------------------------
 # main.py
 # -----------------------------
+import os
 import numpy as np
 import pandas as pd
 import warnings
@@ -11,6 +12,9 @@ from src.plot import plot_results
 
 # Suppress RankWarnings for high-degree polynomial fits
 warnings.simplefilter('ignore', np.RankWarning)
+
+# Ensure results folder exists
+os.makedirs("results", exist_ok=True)
 
 # Parameters
 n_points = 300
