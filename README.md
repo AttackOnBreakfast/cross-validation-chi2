@@ -39,7 +39,7 @@ Clone the repo and install dependencies with pip:
 
 ```bash
 pip install -r requirements.txt
-```
+```bash
 
 ---
 
@@ -70,7 +70,7 @@ Upon running the project, the following files are generated:
 
 ## 📁 Project Structure
 
-```
+```bash
 cross-validation-chi2/
 │
 ├── main.py                        # Main script: generates data, fits models, plots
