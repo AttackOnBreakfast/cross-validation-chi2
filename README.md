@@ -6,18 +6,18 @@ This repository performs a cross-validation study of model fitting and $\chi^2$ 
 
 ## Features
 
-- Truth function defined as:
+- **Truth function defined as:**
 
-  **f_truth(x) = 3 · (x + 0.2)^1.2 · (1.2 − x)^1.2 · (1 + 2.3x)**
+  **f_truth(x) = 3 · (x + 0.2)¹⋅² · (1.2 − x)¹⋅² · (1 + 2.3x)**
 
-- Synthetic data generated with configurable Gaussian noise
-- Polynomial fitting using `np.polyfit` and `np.poly1d`
-- Reduced $\chi^2$ computation on training and testing datasets
-- Error bars and variance bands on $\chi^2$ plots
-- Output files:
-  - `results/chi2_dispersion_variance.csv`: numeric table of dispersions and variances
-  - `results/chi2_table.tex`: LaTeX-formatted version
-  - `figures/chi2_plot.png`: visualization of cross-validated chi-squared with error bars
+- Synthetic data generated with configurable Gaussian noise  
+- Polynomial fitting using `np.polyfit` and `np.poly1d`  
+- Reduced χ² computed on training and testing datasets  
+- Error bars and variance bands on χ² plots  
+- Output files include:
+  - `results/chi2_dispersion_variance.csv`: numeric table of dispersions and variances  
+  - `results/chi2_table.tex`: LaTeX-formatted version  
+  - `figures/chi2_plot.png`: visualization of cross-validated chi-squared with error bars  
 
 ---
 
