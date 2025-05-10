@@ -8,9 +8,7 @@ This repository performs a cross-validation study of model fitting and $\chi^2$ 
 
 - **Truth function defined as:**
 
-  $$
-  f_{\text{truth}}(x) = 3(x + 0.2)^{1.2}(1.2 - x)^{1.2}(1 + 2.3x)
-  $$
+  $$f_{\text{truth}}(x) = 3(x + 0.2)^{1.2}(1.2 - x)^{1.2}(1 + 2.3x)$$
 
 - Synthetic data generated with configurable Gaussian noise  
 - Polynomial fitting using `np.polyfit` and `np.poly1d`  
