@@ -68,8 +68,7 @@ Upon running the project, the following files are generated:
 
 ## 📁 Project Structure
 
-````markdown
-```text
+```bash
 cross-validation-chi2/
 │
 ├── main.py                        # Main script: generates data, fits models, plots
@@ -96,13 +95,7 @@ cross-validation-chi2/
 ├── requirements.txt
 ├── .gitignore
 └── README.md
-````
-
----
-
-## License
-
-This project is licensed under the **MIT License** – feel free to use, modify, and distribute.
+```
 
 ---
 
