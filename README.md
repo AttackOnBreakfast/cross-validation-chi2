@@ -2,37 +2,26 @@
 
 This repository performs a cross-validation study of model fitting and $\chi^2$ analysis using synthetic data. The setup simulates experimental uncertainties and compares fitted vs predicted chi-squared values across varying model complexities.
 
+---
+
 ## Features
 
-- Truth function defined as:  
-  $$f_{\text{truth}}(x) = 3(x + 0.2)^{1.2}(1.2 - x)^{1.2}(1 + 2.3x)$$
+- Truth function defined as:
+
+  $$
+  f_{\text{truth}}(x) = 3(x + 0.2)^{1.2}(1.2 - x)^{1.2}(1 + 2.3x)
+  $$
+
 - Synthetic data generated with configurable Gaussian noise
-- Polynomial fitting using $\texttt{np.polyfit}$ and $\texttt{np.poly1d}$
+- Polynomial fitting using `np.polyfit` and `np.poly1d`
 - Reduced $\chi^2$ computation on training and testing datasets
 - Error bars and variance bands on $\chi^2$ plots
-- Output of:
-  - `chi2_dispersion_variance.csv`: Numeric data table
-  - `chi2_table.tex`: LaTeX-formatted table
+- Output files:
+  - `results/chi2_dispersion_variance.csv`: numeric table of dispersions and variances
+  - `results/chi2_table.tex`: LaTeX-formatted version
+  - `figures/chi2_plot.png`: visualization of cross-validated chi-squared with error bars
 
-## Folder Structure
-
-cross-validation-chi2/
-|
-├── main.py                  # Entry point: runs data generation, fitting, cross-validation, plotting
-|
-├── src/                     # Source code modules
-│   ├── __init__.py
-│   ├── data.py              # Sample generators for training/validation
-│   ├── fitting.py           # Polynomial fitting and chi-squared calculations
-│   ├── plot.py              # All plotting logic (data + chi2 curves)
-│   ├── theory.py            # Theoretical curves: <χ2>, Var(χ2)
-│   ├── truth_function.py    # Defines the underlying f_truth(x)
-│   └── utils.py             # General helpers (data generation, etc.)
-|
-├── chi2_dispersion_variance.csv     # Exported numeric results
-├── chi2_table.tex                   # LaTeX table for χ2 std and variance
-├── requirements.txt                # (Optional) Python dependencies
-└── README.md
+---
 
 ## Requirements
 
@@ -42,12 +31,17 @@ cross-validation-chi2/
 - SciPy
 - Pandas
 
+---
+
 ## Installation
 
 Clone the repo and install dependencies with pip:
 
 ```bash
 pip install -r requirements.txt
+```
+
+---
 
 ## Usage
 
@@ -55,16 +49,55 @@ To run the simulation and generate cross-validation plots and statistical analys
 
 ```bash
 python main.py
+```
+
+---
 
 ## Output
 
 Upon running the project, the following files are generated:
 
-- **`chi2_dispersion_variance.csv`**  
-  Contains a table of chi-squared standard deviations (dispersions) and theoretical variances for both training and testing datasets.
+- `results/chi2_dispersion_variance.csv`  
+  Contains a table of chi-squared standard deviations (dispersions) and theoretical variance predictions
 
-- **`chi2_table.tex`**  
-  LaTeX-formatted table showing $\sigma_A$, $\sigma_B$ and their theoretical variance predictions, suitable for inclusion in reports.
+- `results/chi2_table.tex`  
+  LaTeX-formatted table showing $\sigma_A$, $\sigma_B$ and their theoretical variance predictions
+
+- `figures/chi2_plot.png`  
+  Graph of $\chi^2$ vs model complexity with error bars and theoretical variance bands
+
+---
+
+## 📁 Project Structure
+
+```
+cross-validation-chi2/
+│
+├── main.py                        # Main script: generates data, fits models, plots
+├── cross-validation-chi2.py       # Working reference file (legacy)
+│
+├── src/                           # Source code
+│   ├── data.py                    # Data generation utilities
+│   ├── fitting.py                 # Polynomial fit and chi2 calculation
+│   ├── plot.py                    # Plotting logic
+│   ├── theory.py                  # Theoretical expectations for <χ²> and Var(χ²)
+│   ├── truth_function.py          # Defines the underlying truth function
+│   └── utils.py                   # Generic helper functions
+│
+├── results/                       # Generated output
+│   ├── chi2_dispersion_variance.csv
+│   └── chi2_table.tex
+│
+├── figures/                       # Plot images
+│   └── chi2_plot.png
+│
+├── chi2_dispersion.tex            # LaTeX explanation: empirical dispersion
+├── chi2_variance.tex              # LaTeX explanation: theoretical variance
+│
+├── requirements.txt
+├── .gitignore
+└── README.md
+```
 
 ---
 
