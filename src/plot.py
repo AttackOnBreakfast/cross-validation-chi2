@@ -1,6 +1,7 @@
 # -----------------------------
 # src/plot.py
 # -----------------------------
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
@@ -82,10 +83,15 @@ def plot_results(
 
     plt.xlabel("Model Complexity (Polynomial Degree)")
     plt.ylabel(r"$\chi^2$ (log scale)")
-    plt.title("Cross-validated $\chi^2$ with Error Bars and Variance Bands")
+    plt.title(r"Cross-validated $\chi^2$ with Error Bars and Variance Bands")
     plt.yscale("log")
     plt.legend()
     plt.grid(True, which="both", linestyle="--")
 
     plt.tight_layout()
+
+    # Save to figures/ folder
+    os.makedirs("figures", exist_ok=True)
+    plt.savefig("figures/chi2_cross_validation.png", dpi=300)
+
     plt.show()
