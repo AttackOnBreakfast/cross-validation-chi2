@@ -3,10 +3,6 @@ __pycache__/
 *.py[cod]
 *.log
 
-# Data files
-*.csv
-*.tex
-
 # Jupyter checkpoints
 .ipynb_checkpoints/
 
@@ -15,3 +11,11 @@ __pycache__/
 
 # Conda
 environment.yml
+
+# Ignore all CSV and TeX files except specific results
+*.csv
+*.tex
+
+# Allow tracked results
+!results/chi2_dispersion_variance.csv
+!results/chi2_table.tex
