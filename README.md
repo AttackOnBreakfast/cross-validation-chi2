@@ -77,5 +77,4 @@ This project is licensed under the **MIT License** – feel free to use, modify,
 ## Author
 
 **Artemiy Filippov**  
-Physics Research @ Michigan State University  
-2025
+Physics Research @ Michigan State University 2025
