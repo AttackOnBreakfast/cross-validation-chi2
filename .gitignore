@@ -12,6 +12,11 @@ __pycache__/
 !results/*.csv
 !results/*.tex
 
+# Allow saved plots in figures/
+!figures/*.png
+!figures/*.pdf
+!figures/*.svg
+
 # Ignore Jupyter artifacts
 .ipynb_checkpoints/
 
