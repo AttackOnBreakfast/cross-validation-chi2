@@ -8,7 +8,8 @@ import warnings
 from src.utils import generate_data
 from src.fitting import fit_polynomial, compute_chi2
 from src.theory import chi2_theory_A, chi2_theory_B, chi2_variance_A, chi2_variance_B
-from src.plot import plot_results
+from src.plot import plot_results, plot_prior_posterior
+from src.prior import exponential_model_prior, posterior_over_models
 
 # Suppress RankWarnings for high-degree polynomial fits
 warnings.simplefilter('ignore', np.RankWarning)
@@ -47,7 +48,7 @@ for seed in range(n_trials):
         chi2_A_all[seed, m - 1] = chi2_a
         chi2_B_all[seed, m - 1] = chi2_b
 
-# Averages and theoretical predictions
+# Summary statistics
 degrees = np.arange(1, max_params + 1)
 chi2_A_avg = chi2_A_accum / n_trials
 chi2_B_avg = chi2_B_accum / n_trials
@@ -58,7 +59,11 @@ chi2_B_theory = chi2_theory_B(n_points, degrees)
 chi2_A_var_theory = chi2_variance_A(n_points, degrees)
 chi2_B_var_theory = chi2_variance_B(n_points, degrees)
 
-# Plot all results with error bars and theoretical bands
+# Prior and posterior
+prior = exponential_model_prior(max_params, lam=0.1)
+posterior = posterior_over_models(chi2_B_avg, prior, sigma_squared=sigma**2)
+
+# Plot everything
 plot_results(
     sample=(x_fit_sample, y_fit_sample),
     max_degree=max_params,
@@ -71,25 +76,27 @@ plot_results(
     chi2_A_var_theory=chi2_A_var_theory,
     chi2_B_var_theory=chi2_B_var_theory
 )
+plot_prior_posterior(degrees, prior, posterior)
 
 # Save CSV
-df = pd.DataFrame({
+posterior_df = pd.DataFrame({
     "Degree": degrees,
-    "Chi2_A_std": chi2_A_std,
-    "Chi2_A_var_theory": chi2_A_var_theory,
+    "Prior": prior,
+    "Posterior": posterior,
+    "Chi2_B_avg": chi2_B_avg,
     "Chi2_B_std": chi2_B_std,
     "Chi2_B_var_theory": chi2_B_var_theory
 })
-df.to_csv("results/chi2_dispersion_variance.csv", index=False)
+posterior_df.to_csv("results/prior_posterior_analysis.csv", index=False)
 
 # Save LaTeX table
 with open("results/chi2_table.tex", "w") as f:
-    f.write("\\begin{tabular}{c c c c c}\n")
+    f.write("\\begin{tabular}{c c c c c c}\n")
     f.write("\\toprule\n")
-    f.write("Degree & $\\sigma_A$ & $\\mathrm{Var}_A^{\\text{th}}$ & $\\sigma_B$ & $\\mathrm{Var}_B^{\\text{th}}$ \\\\\n")
+    f.write("Degree & Prior & Posterior & $\\chi^2_B$ & $\\sigma_B$ & $\\mathrm{Var}_B^{\\text{th}}$ \\\\\n")
     f.write("\\midrule\n")
     for i, m in enumerate(degrees):
-        row = f"{m} & {chi2_A_std[i]:.3f} & {chi2_A_var_theory[i]:.1f} & {chi2_B_std[i]:.3f} & {chi2_B_var_theory[i]:.1f} \\\\\n"
+        row = f"{m} & {prior[i]:.3f} & {posterior[i]:.3f} & {chi2_B_avg[i]:.1f} & {chi2_B_std[i]:.2f} & {chi2_B_var_theory[i]:.1f} \\\\\n"
         f.write(row)
     f.write("\\bottomrule\n")
     f.write("\\end{tabular}\n")

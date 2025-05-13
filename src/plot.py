@@ -8,6 +8,7 @@ from scipy.interpolate import interp1d
 from src.fitting import fit_polynomial
 from src.truth_function import f_truth
 
+
 def plot_results(
     sample,
     max_degree,
@@ -137,4 +138,19 @@ def plot_results(
     os.makedirs("figures", exist_ok=True)
     plt.tight_layout()
     plt.savefig("figures/chi2_var_vs_theory.png", dpi=300)
+    plt.show()
+
+
+def plot_prior_posterior(degrees, prior, posterior):
+    """Visualizes prior and posterior model distributions."""
+    plt.figure(figsize=(10, 6))
+    plt.plot(degrees, prior, 'k--', label="Prior", linewidth=2)
+    plt.plot(degrees, posterior, 'b-', label="Posterior", linewidth=2)
+    plt.xlabel("Polynomial Degree (Model Complexity)")
+    plt.ylabel("Probability")
+    plt.title("Prior vs Posterior over Model Degrees")
+    plt.legend()
+    plt.grid(True)
+    os.makedirs("figures", exist_ok=True)
+    plt.savefig("figures/prior_vs_posterior.png", dpi=300)
     plt.show()
