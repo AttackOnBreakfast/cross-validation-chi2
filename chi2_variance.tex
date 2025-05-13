@@ -39,7 +39,7 @@ We apply this to estimate the theoretical variance for both datasets:
 
 \begin{align*}
 \mathrm{Var}_{\text{theory}}(\chi^2_A) &= 2(N - m) \\
-\mathrm{Var}_{\text{theory}}(\chi^2_B) &= 2(N + m)
+\mathrm{Var}_{\text{theory}}(\chi^2_B) &= 2(N + 3m)
 \end{align*}
 
 Here, $N$ is the number of data points in each dataset, and $m$ is the number of fit parameters (i.e., polynomial degree + 1).
@@ -49,7 +49,7 @@ Here, $N$ is the number of data points in each dataset, and $m$ is the number of
 In the plot:
 \begin{itemize}
     \item The empirical standard deviations $\sqrt{\mathrm{Var}(\chi^2_A)}$ and $\sqrt{\mathrm{Var}(\chi^2_B)}$ are shown as vertical error bars.
-    \item The theoretical standard deviations $\sqrt{2(N - m)}$ and $\sqrt{2(N + m)}$ are shown as shaded bands centered on the average $\chi^2$ values.
+    \item The theoretical standard deviations $\sqrt{2(N - m)}$ and $\sqrt{2(N + 3m)}$ are shown as shaded bands centered on the average $\chi^2$ values.
 \end{itemize}
 
 This comparison helps evaluate whether the observed variability in $\chi^2$ aligns with expectations under the assumption of Gaussian noise and a well-calibrated model.
