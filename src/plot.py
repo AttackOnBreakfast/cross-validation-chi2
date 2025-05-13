@@ -36,7 +36,7 @@ def plot_results(
     chi2_A_theory_smooth = interp_A_theory(x_dense)
     chi2_B_theory_smooth = interp_B_theory(x_dense)
 
-    # Plot
+    # Plot 1: Fit + chi2 vs complexity
     plt.figure(figsize=(18, 9))
 
     # Left: Data and fit
@@ -59,11 +59,9 @@ def plot_results(
     plt.plot(x_dense, chi2_A_smooth, 'b--')
     plt.plot(x_dense, chi2_B_smooth, 'r--')
 
-    # Theory lines
     plt.plot(x_dense, chi2_A_theory_smooth, 'b:', label=r"Theory: $N - m$")
     plt.plot(x_dense, chi2_B_theory_smooth, 'r:', label=r"Theory: $N + m$")
 
-    # Variance bands
     plt.fill_between(
         degrees,
         chi2_A + np.sqrt(chi2_A_var_theory),
@@ -89,9 +87,54 @@ def plot_results(
     plt.grid(True, which="both", linestyle="--")
 
     plt.tight_layout()
-
-    # Save to figures/ folder
     os.makedirs("figures", exist_ok=True)
     plt.savefig("figures/chi2_cross_validation.png", dpi=300)
+    plt.show()
 
+    # Plot 2: Zoomed-in region with Pearson r annotation
+    empirical_var_A = chi2_A_std ** 2
+    empirical_var_B = chi2_B_std ** 2
+
+    fig, ax = plt.subplots(figsize=(12, 7))
+
+    ax.plot(chi2_A_var_theory, empirical_var_A, 'o-', color='blue', label=r"Training: $\chi^2_A$")
+    ax.plot(chi2_B_var_theory, empirical_var_B, 's-', color='red', label=r"Test: $\chi^2_B$")
+    ax.plot([0, 1.05 * max(chi2_B_var_theory)], [0, 1.05 * max(chi2_B_var_theory)], 'k--', label=r"$y = x$")
+
+    ax.set_xlabel(r"Theoretical $\mathrm{Var}(\chi^2)$")
+    ax.set_ylabel(r"Empirical Variance of $\chi^2$")
+    ax.set_title(r"Zoomed $\chi^2$ Variance vs Theoretical Prediction")
+    ax.grid(True)
+    ax.legend()
+
+    # Smart zoom: keep points with small relative deviation
+    threshold = 0.15
+    mask_A = np.abs(empirical_var_A - chi2_A_var_theory) / chi2_A_var_theory < threshold
+    mask_B = np.abs(empirical_var_B - chi2_B_var_theory) / chi2_B_var_theory < threshold
+    combined_mask = mask_A | mask_B
+
+    if np.any(combined_mask):
+        x_vals = np.concatenate([chi2_A_var_theory[combined_mask], chi2_B_var_theory[combined_mask]])
+        y_vals = np.concatenate([empirical_var_A[combined_mask], empirical_var_B[combined_mask]])
+        x_min, x_max = x_vals.min(), x_vals.max()
+        y_min, y_max = y_vals.min(), y_vals.max()
+        margin_x = 0.1 * (x_max - x_min)
+        margin_y = 0.1 * (y_max - y_min)
+        ax.set_xlim(x_min - margin_x, x_max + margin_x)
+        ax.set_ylim(y_min - margin_y, y_max + margin_y)
+
+    # Pearson r annotation
+    from scipy.stats import pearsonr
+    r_A, _ = pearsonr(chi2_A_var_theory, empirical_var_A)
+    r_B, _ = pearsonr(chi2_B_var_theory, empirical_var_B)
+    ax.text(0.05, 0.95,
+            rf"$r_A = {r_A:.3f}$" + "\n" + rf"$r_B = {r_B:.3f}$",
+            transform=ax.transAxes,
+            verticalalignment='top',
+            fontsize=12,
+            bbox=dict(facecolor='white', edgecolor='gray', boxstyle='round'))
+
+    os.makedirs("figures", exist_ok=True)
+    plt.tight_layout()
+    plt.savefig("figures/chi2_var_vs_theory.png", dpi=300)
     plt.show()
