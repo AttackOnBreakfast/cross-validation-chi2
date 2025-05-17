@@ -11,13 +11,17 @@ This repository performs a cross-validation study of model fitting and $\chi^2$ 
   $$f_{\text{truth}}(x) = 3(x + 0.2)^{1.2}(1.2 - x)^{1.2}(1 + 2.3x)$$
 
 - Synthetic data generated with configurable Gaussian noise  
-- Polynomial fitting using `np.polyfit` and `np.poly1d`  
-- Reduced χ² computed on training and testing datasets  
+- Polynomial fitting using `np.polyfit` (MLE) and ridge-regularized MAP estimation  
+- Reduced $\chi^2$ computed on training and testing datasets  
 - Theoretical predictions for:
   - Mean $\chi^2$
   - Variance of $\chi^2$
 - Empirical error bars and theoretical variance bands on $\chi^2$ plots  
 - Empirical vs theoretical variance plots with Pearson $r$ annotation
+- **New:**
+  - MAP curve $\chi^2(D_B, \theta_{\mathrm{MAP}}^{(m)})$ shown across degrees
+  - MAP training curve $\chi^2(D_A, \theta_{\mathrm{MAP}}^{(m)})$ now included
+  - Vertical lines at MLE and MAP-selected degrees
 
 ---
 
@@ -32,8 +36,14 @@ This repository performs a cross-validation study of model fitting and $\chi^2$ 
 - 📊 `figures/chi2_cross_validation.png`  
   Log-scaled plot of $\chi^2$ vs model complexity with error bars and variance bands
 
+- 📊 `figures/combined_model_fit_and_chi2.png`  
+  Two-panel plot: (top) truth vs MLE vs MAP fit; (bottom) $\chi^2$ curves for MLE, MAP, and theory
+
 - 📊 `figures/chi2_var_vs_theory.png`  
   Zoomed-in plot comparing empirical and theoretical variance with correlation coefficients
+
+- 📊 `figures/prior_vs_posterior.png`  
+  Plot comparing exponential prior and posterior probability over degrees
 
 ---
 
@@ -92,8 +102,8 @@ cross-validation-chi2/
 │
 ├── src/                           # Core source code
 │   ├── data.py                    # Data generation
-│   ├── fitting.py                 # Polynomial fitting & chi² computation
-│   ├── plot.py                    # Visualization code
+│   ├── fitting.py                 # Polynomial fitting & chi² computation (MLE + MAP)
+│   ├── plot.py                    # Visualization code including MAP chi² curves
 │   ├── theory.py                  # Theoretical mean and variance formulas
 │   ├── truth_function.py          # Truth function definition
 │   └── utils.py                   # Generic helper utilities
@@ -104,7 +114,9 @@ cross-validation-chi2/
 │
 ├── figures/                       # Generated visualizations
 │   ├── chi2_cross_validation.png
-│   └── chi2_var_vs_theory.png
+│   ├── combined_model_fit_and_chi2.png
+│   ├── chi2_var_vs_theory.png
+│   └── prior_vs_posterior.png
 │
 ├── chi2_dispersion.tex            # Notes on empirical dispersion calculation
 ├── chi2_variance.tex              # Notes on theoretical chi² variance
