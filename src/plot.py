@@ -103,18 +103,9 @@ def plot_figure1_fit_and_chi2(
     ha='center', color='gray', fontsize=16
     )
 
-    # Inset zoom: deg 1–2
-    ax_inset = ax2.inset_axes([0.45, 0.7, 0.4, 0.25])
-    low_deg_mask = degrees <= 2
-    ax_inset.errorbar(degrees[low_deg_mask], chi2_A[low_deg_mask], yerr=chi2_A_std[low_deg_mask], fmt='o', color='blue')
-    ax_inset.errorbar(degrees[low_deg_mask], chi2_B[low_deg_mask], yerr=chi2_B_std[low_deg_mask], fmt='s', color='red')
-    ax_inset.set_yscale("log")
-    ax_inset.set_xticks([1, 2])
-    ax_inset.grid(True, which="both", linestyle=":")
-
     # Final spacing and save
     fig_fit_and_chi2.subplots_adjust(left=0.05, right=0.98, top=0.92, bottom=0.10, wspace=0.25)
-    fig_fit_and_chi2.savefig("figures/combined_fit_and_chi2_24x13.5.png", dpi=300)
+    fig_fit_and_chi2.savefig("figures/combined_fit_and_chi2.png", dpi=300)
     plt.show()
 
 def plot_figure2_variance_comparison(chi2_A_std, chi2_B_std, chi2_A_var_theory, chi2_B_var_theory):
@@ -155,44 +146,4 @@ def plot_figure2_variance_comparison(chi2_A_std, chi2_B_std, chi2_A_var_theory, 
 
     plt.tight_layout()
     plt.savefig("figures/chi2_var_vs_theory.png", dpi=300)
-    plt.show()
-
-def plot_figure3_bma_prediction(x_fit, y_fit, posterior, sigma):
-    degrees = np.arange(1, len(posterior) + 1)
-    x_test = np.linspace(0, 1, 200)
-    y_bma_mean = np.zeros_like(x_test)
-    y_bma_var = np.zeros_like(x_test)
-
-    for m, weight in zip(degrees, posterior):
-        model = fit_polynomial(x_fit, y_fit, m)
-        pred = model(x_test)
-        y_bma_mean += weight * pred
-        y_bma_var += weight * pred**2
-
-    y_bma_std = np.sqrt(y_bma_var - y_bma_mean**2)
-
-    x_test_eval, y_test_eval = generate_data(len(x_fit), sigma, seed=777)
-    y_bma_eval = np.zeros_like(x_test_eval)
-    for m, weight in zip(degrees, posterior):
-        model = fit_polynomial(x_fit, y_fit, m)
-        y_bma_eval += weight * model(x_test_eval)
-    chi2_bma_test = np.sum(((y_test_eval - y_bma_eval) / sigma) ** 2)
-
-    truth_x = np.linspace(0, 1, 500)
-    plt.figure(figsize=(10, 6))
-    plt.fill_between(x_test, y_bma_mean - y_bma_std, y_bma_mean + y_bma_std,
-                     color='gray', alpha=0.3, label='BMA ± std')
-    plt.plot(x_test, y_bma_mean, label='BMA Mean', color='black', linewidth=2)
-    plt.errorbar(x_fit, y_fit, yerr=sigma, fmt='.', alpha=0.4, label='Data')
-    plt.plot(truth_x, f_truth(truth_x), 'k--', label="Truth")
-    plt.title(r"BMA Fit and $\chi^2$ Test")
-    plt.text(0.05, 0.95, rf"$\chi^2(D_B; f_{{\mathrm{{BMA}}}}) = {chi2_bma_test:.1f}$",
-             transform=plt.gca().transAxes,
-             verticalalignment='top', bbox=dict(facecolor='white', edgecolor='gray', boxstyle='round'))
-    plt.xlabel("x")
-    plt.ylabel("Predicted K")
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    plt.savefig("figures/bma_prediction.png", dpi=300)
     plt.show()

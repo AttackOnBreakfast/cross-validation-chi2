@@ -13,11 +13,10 @@ from src.theory import (
     chi2_variance_A,
     chi2_variance_B
 )
-from src.prior import exponential_model_prior, posterior_over_models
+from src.prior import exponential_model_prior, posterior_over_models, uniform_model_prior
 from src.plot import (
     plot_figure1_fit_and_chi2,
     plot_figure2_variance_comparison,
-    plot_figure3_bma_prediction
 )
 
 # Suppress polynomial fit warnings
@@ -71,6 +70,8 @@ chi2_B_var_theory = chi2_variance_B(n_points, degrees)
 # Priors and posteriors
 prior = exponential_model_prior(max_params, lam=0.1)
 posterior = posterior_over_models(chi2_B_avg, prior, sigma_squared=sigma**2)
+uniform_prior = uniform_model_prior(max_params)
+exponential_prior = exponential_model_prior(max_params, lam=0.6)
 
 # Plots
 plot_figure1_fit_and_chi2(
@@ -88,9 +89,6 @@ plot_figure2_variance_comparison(
     chi2_A_var_theory, chi2_B_var_theory
 )
 
-plot_figure3_bma_prediction(
-    x_fit_sample, y_fit_sample, posterior, sigma
-)
 
 # Save summary
 summary_df = pd.DataFrame({
