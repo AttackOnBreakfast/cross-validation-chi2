@@ -17,6 +17,7 @@ from src.prior import exponential_model_prior, posterior_over_models, uniform_mo
 from src.plot import (
     plot_figure1_fit_and_chi2,
     plot_figure2_variance_comparison,
+    plot_figure3_expectation_and_std_vs_degree
 )
 
 # Suppress polynomial fit warnings
@@ -89,6 +90,13 @@ plot_figure2_variance_comparison(
     chi2_A_var_theory, chi2_B_var_theory
 )
 
+plot_figure3_expectation_and_std_vs_degree(
+    n_trials=n_trials,
+    n_points=n_points,
+    sigma=sigma,
+    max_degree=max_params,
+    x_targets=[0.25, 0.5, 0.75]
+)
 
 # Save summary
 summary_df = pd.DataFrame({

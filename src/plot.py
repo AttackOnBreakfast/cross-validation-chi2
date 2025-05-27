@@ -5,7 +5,6 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.gridspec import GridSpec
 from scipy.interpolate import interp1d
 from scipy.stats import pearsonr
 from src.fitting import fit_polynomial
@@ -146,4 +145,62 @@ def plot_figure2_variance_comparison(chi2_A_std, chi2_B_std, chi2_A_var_theory, 
 
     plt.tight_layout()
     plt.savefig("figures/chi2_var_vs_theory.png", dpi=300)
+    plt.show()
+
+def plot_figure3_expectation_and_std_vs_degree(
+    n_trials,
+    n_points,
+    sigma,
+    max_degree,
+    x_targets=[0.25, 0.5, 0.75]
+):
+    os.makedirs("figures", exist_ok=True)
+    degrees = np.arange(0, max_degree + 1)
+    x_targets = np.asarray(x_targets)
+
+    means = {x: [] for x in x_targets}
+    stds = {x: [] for x in x_targets}
+    truth_vals = {x: f_truth(x) for x in x_targets}
+
+    for m in degrees:
+        preds = {x: [] for x in x_targets}
+        for seed in range(n_trials):
+            x_train, y_train = generate_data(n_points, sigma, seed)
+            model = fit_polynomial(x_train, y_train, m)
+            for x in x_targets:
+                preds[x].append(model(x))
+
+        for x in x_targets:
+            values = np.array(preds[x])
+            means[x].append(np.mean(values))
+            stds[x].append(np.std(values))
+
+    fig, axes = plt.subplots(len(x_targets), 1, figsize=(14, 3.5 * len(x_targets)), sharex=True)
+    if len(x_targets) == 1:
+        axes = [axes]
+
+    colors = plt.get_cmap("tab10")
+
+    for i, (x, ax) in enumerate(zip(x_targets, axes)):
+        mean_arr = np.array(means[x])
+        std_arr = np.array(stds[x])
+        truth_val = truth_vals[x]
+        color = colors(i)
+
+        ax.plot(degrees, mean_arr, label=fr"$\mathbb{{E}}[y(x={x})]$", color=color)
+        ax.fill_between(degrees, mean_arr - std_arr, mean_arr + std_arr, alpha=0.2, color=color)
+        ax.axhline(truth_val, linestyle=":", color=color, alpha=0.8,
+                   label=fr"$f_{{\mathrm{{truth}}}}(x={x})$")
+        ax.set_ylabel("y value")
+        ax.set_title(fr"Prediction mean and std at $x = {x}$ vs Number of Parameters (m)")
+        ax.grid(True, which="both", linestyle="--")
+        ax.legend(loc="center right")
+        ax.set_xlim(left=0, right=max_degree + 1)
+
+    axes[-1].set_xlabel("Model Complexity (Polynomial Degree)")
+
+    secax = axes[0].secondary_xaxis('top', functions=(lambda d: d + 1, lambda p: p - 1))
+
+    fig.tight_layout()
+    fig.savefig("figures/figure3_expectation_std_combined.png", dpi=300)
     plt.show()
