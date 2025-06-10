@@ -175,31 +175,50 @@ def plot_figure3_expectation_and_std_vs_degree(
             means[x].append(np.mean(values))
             stds[x].append(np.std(values))
 
-    fig, axes = plt.subplots(len(x_targets), 1, figsize=(14, 3.5 * len(x_targets)), sharex=True)
+    fig, axes = plt.subplots(len(x_targets), 2, figsize=(16, 3.5 * len(x_targets)), sharex=True)
     if len(x_targets) == 1:
         axes = [axes]
 
     colors = plt.get_cmap("tab10")
 
-    for i, (x, ax) in enumerate(zip(x_targets, axes)):
+    for i, x in enumerate(x_targets):
+        color = colors(i)
         mean_arr = np.array(means[x])
         std_arr = np.array(stds[x])
         truth_val = truth_vals[x]
-        color = colors(i)
+        rel_error = std_arr / mean_arr
 
-        ax.plot(degrees, mean_arr, label=fr"$\mathbb{{E}}[y(x={x})]$", color=color)
-        ax.fill_between(degrees, mean_arr - std_arr, mean_arr + std_arr, alpha=0.2, color=color)
-        ax.axhline(truth_val, linestyle=":", color=color, alpha=0.8,
-                   label=fr"$f_{{\mathrm{{truth}}}}(x={x})$")
-        ax.set_ylabel("y value")
-        ax.set_title(fr"Prediction mean and std at $x = {x}$ vs Number of Parameters (m)")
-        ax.grid(True, which="both", linestyle="--")
-        ax.legend(loc="center right")
-        ax.set_xlim(left=0, right=max_degree + 1)
+        # === Left column: Mean ± Std with truth
+        ax_mean = axes[i][0]
+        ax_mean.plot(degrees, mean_arr, label=fr"$\mathbb{{E}}[y(x={x})]$", color=color)
+        ax_mean.fill_between(degrees, mean_arr - std_arr, mean_arr + std_arr, alpha=0.2, color=color)
+        ax_mean.axhline(truth_val, linestyle=":", color=color, alpha=0.8,
+                        label=fr"$f_{{\mathrm{{truth}}}}(x={x})$")
+        ax_mean.set_ylabel("y value")
+        ax_mean.set_title(fr"Prediction mean and std at $x = {x}$")
+        ax_mean.grid(True, which="both", linestyle="--")
+        ax_mean.legend(loc="center right")
 
-    axes[-1].set_xlabel("Model Complexity (Polynomial Degree)")
+        # === Right column: Std vs degree + rel error on twin axis
+        ax_std = axes[i][1]
+        ax_std.plot(degrees, std_arr, label=r"Standard Deviation", color=color)
+        ax_std.set_ylabel("Standard Deviation")
+        ax_std.set_title(fr"Std Dev and Relative Error at $x = {x}$")
+        ax_std.grid(True, which="both", linestyle="--")
 
-    secax = axes[0].secondary_xaxis('top', functions=(lambda d: d + 1, lambda p: p - 1))
+        ax_rel = ax_std.twinx()
+        ax_rel.plot(degrees, rel_error, linestyle="--", color='black', label="Relative Error")
+        ax_rel.set_ylabel("Relative Error", color='black')
+        ax_rel.tick_params(axis='y', labelcolor='black')
+
+        lines1, labels1 = ax_std.get_legend_handles_labels()
+        lines2, labels2 = ax_rel.get_legend_handles_labels()
+        ax_std.legend(lines1 + lines2, labels1 + labels2, loc="upper left")
+
+    axes[-1][0].set_xlabel("Model Complexity (Polynomial Degree)")
+    axes[-1][1].set_xlabel("Model Complexity (Polynomial Degree)")
+
+    secax = axes[0][0].secondary_xaxis('top', functions=(lambda d: d + 1, lambda p: p - 1))
 
     fig.tight_layout()
     fig.savefig("figures/figure3_expectation_std_combined.png", dpi=300)
