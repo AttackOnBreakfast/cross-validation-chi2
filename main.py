@@ -4,7 +4,6 @@
 import os
 import numpy as np
 import pandas as pd
-from numpy.exceptions import RankWarning
 import warnings
 from src.utils import generate_data
 from src.fitting import fit_polynomial, compute_chi2
@@ -22,7 +21,7 @@ from src.plot import (
 )
 
 # Suppress polynomial fit warnings
-warnings.filterwarnings('ignore', category=RankWarning)
+warnings.simplefilter('ignore', np.RankWarning)
 
 # Constants
 RESULTS_DIR = "results"

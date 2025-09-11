@@ -10,6 +10,12 @@ from scipy.stats import pearsonr
 from src.fitting import fit_polynomial
 from src.truth_function import f_truth
 from src.utils import generate_data
+from src.theory import (
+    chi2_theory_A_step,
+    chi2_theory_B_step,
+    chi2_variance_A_step,
+    chi2_variance_B_step
+)
 
 plt.rcParams.update({
     'font.size': 16,               # Master font size (affects most things)
@@ -223,3 +229,67 @@ def plot_figure3_expectation_and_std_vs_degree(
     fig.tight_layout()
     fig.savefig("figures/figure3_expectation_std_combined.png", dpi=300)
     plt.show()
+
+# -----------------------------
+## Plotting for Neural Network training
+# -----------------------------
+
+def plot_nn_fit_and_chi2(
+    x_sample, y_sample, sigma,
+    x_dense, y_dense,
+    chi2_A, chi2_B,
+    n_points,
+    steps,
+    max_m,
+    save_path="figures/nn_fit_and_chi2.png"
+):
+    fig, (ax1, ax2) = plt.subplots(
+        ncols=2,
+        figsize=(18, 8),
+        gridspec_kw={'width_ratios': [10, 9]}
+    )
+
+    # --- Left plot: NN fit on D_A ---
+    ax1.errorbar(x_sample, y_sample, yerr=sigma, fmt='o', alpha=0.5, label="Data A")
+    ax1.plot(x_dense, f_truth(x_dense), 'k--', label="Truth function")
+    ax1.plot(x_dense, y_dense, 'r-', label="NN fit")
+    ax1.set_title("NN Fit on Dataset A")
+    ax1.set_xlabel("x")
+    ax1.set_ylabel("y")
+    ax1.grid(True)
+    ax1.legend()
+
+    # --- Right plot: χ² vs iteration ---
+    iterations = np.arange(len(chi2_A))
+    ax2.plot(iterations, chi2_A, 'b-', label=r"$\chi^2(D_A)$")
+    ax2.plot(iterations, chi2_B, 'r-', label=r"$\chi^2(D_B)$")
+
+    # Overlay theory
+    chi2_A_theory = chi2_theory_A_step(n_points, iterations, steps, max_m)
+    chi2_B_theory = chi2_theory_B_step(n_points, iterations, steps, max_m)
+    var_A = chi2_variance_A_step(n_points, iterations, steps, max_m)
+    var_B = chi2_variance_B_step(n_points, iterations, steps, max_m)
+
+    ax2.plot(iterations, chi2_A_theory, 'b--', label="Theory $N - m_{eff}$")
+    ax2.plot(iterations, chi2_B_theory, 'r--', label="Theory $N + m_{eff}$")
+    ax2.fill_between(iterations,
+                     chi2_A_theory - np.sqrt(var_A),
+                     chi2_A_theory + np.sqrt(var_A),
+                     color='blue', alpha=0.2)
+    ax2.fill_between(iterations,
+                     chi2_B_theory - np.sqrt(var_B),
+                     chi2_B_theory + np.sqrt(var_B),
+                     color='red', alpha=0.2)
+
+    ax2.set_title(r"Training & Validation $\chi^2$ with Theory")
+    ax2.set_xlabel("Iteration")
+    ax2.set_ylabel(r"$\chi^2$")
+    ax2.set_yscale("log")
+    ax2.grid(True, which="both", linestyle="--")
+    ax2.legend()
+
+    fig.subplots_adjust(left=0.05, right=0.97, top=0.92, bottom=0.10, wspace=0.25)
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    fig.savefig(save_path, dpi=300)
+    plt.show()
+    plt.close(fig)
