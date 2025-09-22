@@ -1,102 +1,123 @@
 # -----------------------------
-# src/nn_model.py
+# src/nn_model.py (with KFold CV and chi² tracking)
 # -----------------------------
+
+import jax
 import jax.numpy as jnp
-import jax.random as random
-from jax import grad, jit, vmap
 import optax
-from src.truth_function import f_truth
+from flax import linen as nn
+from sklearn.model_selection import KFold
+from typing import List, Dict
+import numpy as np
 
-# === MLP Initialization ===
-def init_mlp_params(layer_sizes, key):
-    """Xavier initialization of weights and zero biases for MLP."""
-    keys = random.split(key, len(layer_sizes) - 1)
-    params = []
-    for k, (m, n) in zip(keys, zip(layer_sizes[:-1], layer_sizes[1:])):
-        W = random.normal(k, (n, m)) * jnp.sqrt(1.0 / m)
-        b = jnp.zeros(n)
-        params.append((W, b))
-    return params
 
-# === Forward Pass ===
-def mlp_forward(params, x):
-    """Applies MLP with tanh activations and a linear output layer."""
-    for W, b in params[:-1]:
-        x = jnp.tanh(jnp.dot(W, x) + b)
-    W, b = params[-1]
-    return jnp.dot(W, x) + b
+class MLP(nn.Module):
+    layer_sizes: List[int]
 
-@jit
-def predict_batch(params, x_batch):
-    return vmap(lambda x: mlp_forward(params, x))(x_batch)
+    @nn.compact
+    def __call__(self, x):
+        for size in self.layer_sizes[:-1]:
+            x = nn.tanh(nn.Dense(size)(x))
+        x = nn.Dense(self.layer_sizes[-1])(x)
+        return x
 
-# === Loss Function ===
-@jit
-def loss_fn(params, x, y, sigma):
-    preds = predict_batch(params, x)
-    return jnp.mean(((preds - y) / sigma) ** 2)  # Reduced χ²
 
-# === JIT-compiled training step factory ===
-def make_train_step(optimizer_update):
-    @jit
-    def train_step(params, opt_state, x, y, sigma):
-        grads = grad(loss_fn)(params, x, y, sigma)
-        updates, opt_state = optimizer_update(grads, opt_state, params)
+def mse_loss(params, model, x, y):
+    preds = model.apply(params, x)
+    return jnp.mean((preds - y) ** 2)
+
+
+def chi2(y_true, y_pred, sigma):
+    return jnp.sum((y_true - y_pred) ** 2) / sigma**2
+
+
+def train_mlp(
+    x_train, y_train,
+    x_val, y_val,
+    hidden_layers: List[int],
+    num_steps: int,
+    sigma: float,
+    seed: int
+):
+    x_mean = x_train.mean()
+    x_std = x_train.std()
+    x_train_norm = (x_train - x_mean) / x_std
+    x_val_norm = (x_val - x_mean) / x_std
+
+    model = MLP(layer_sizes=hidden_layers + [1])
+    rng = jax.random.PRNGKey(seed)
+    params = model.init(rng, jnp.ones((1, 1)))
+
+    optimizer = optax.adam(1e-2)
+    opt_state = optimizer.init(params)
+
+    chi2_train_history = []
+    chi2_val_history = []
+
+    @jax.jit
+    def step(params, opt_state, x_batch, y_batch):
+        loss, grads = jax.value_and_grad(mse_loss)(params, model, x_batch, y_batch)
+        updates, opt_state = optimizer.update(grads, opt_state)
         params = optax.apply_updates(params, updates)
         return params, opt_state
-    return train_step
 
-# === Training Loop with Cross-Validation Logging ===
-def train_mlp_crossval(
-    x_A, y_A, x_B, y_B, sigma,
-    seed=0,
-    hidden_sizes=[128, 128],
-    lr=1e-3,
-    steps=5000,
-    use_clean_targets=False  # ← New flag to optionally use noise-free targets
-):
-    key = random.PRNGKey(seed)
-    layer_sizes = [1] + hidden_sizes + [1]
-    params = init_mlp_params(layer_sizes, key)
+    for step_idx in range(num_steps):
+        params, opt_state = step(params, opt_state, x_train_norm, y_train)
+        if step_idx % 10 == 0:
+            y_pred_train = model.apply(params, x_train_norm)
+            y_pred_val = model.apply(params, x_val_norm)
+            chi2_train_history.append(float(chi2(y_train, y_pred_train, sigma)))
+            chi2_val_history.append(float(chi2(y_val, y_pred_val, sigma)))
 
-    optimizer = optax.adam(lr)
-    opt_state = optimizer.init(params)
-    train_step = make_train_step(optimizer.update)
+    return params, model, x_mean, x_std, chi2_train_history, chi2_val_history
 
-    # Reshape inputs
-    x_A = x_A.reshape(-1, 1)
-    y_A = y_A.reshape(-1)
-    x_B = x_B.reshape(-1, 1)
-    y_B = y_B.reshape(-1)
 
-    # === Replace targets with clean values if requested ===
-    if use_clean_targets:
-        y_A = f_truth(x_A)
-        y_B = f_truth(x_B)
+def kfold_mlp_chi2(
+    x: jnp.ndarray,
+    y: jnp.ndarray,
+    hidden_layers: List[int],
+    num_steps: int = 3000,
+    sigma: float = 0.1,
+    n_splits: int = 5,
+    base_seed: int = 0
+) -> Dict[str, float]:
+    """
+    Runs k-fold CV for a JAX MLP, returns average and std of chi^2.
+    """
+    x = jnp.array(x).reshape(-1, 1)
+    y = jnp.array(y).reshape(-1, 1)
 
-    # === Normalize ===
-    x_mean = x_A.mean()
-    x_std = x_A.std()
-    y_mean = y_A.mean()
-    y_std = y_A.std()
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=base_seed)
 
-    x_A_norm = (x_A - x_mean) / x_std
-    x_B_norm = (x_B - x_mean) / x_std
-    y_A_norm = (y_A - y_mean) / y_std
-    y_B_norm = (y_B - y_mean) / y_std
+    chi2_train_list = []
+    chi2_val_list = []
 
-    chi2_A_hist = []
-    chi2_B_hist = []
+    for fold_idx, (train_idx, val_idx) in enumerate(kf.split(x)):
+        x_train, x_val = x[train_idx], x[val_idx]
+        y_train, y_val = y[train_idx], y[val_idx]
 
-    for step in range(steps):
-        params, opt_state = train_step(params, opt_state, x_A_norm, y_A_norm, sigma / y_std)
-        chi2_A_hist.append(float(loss_fn(params, x_A_norm, y_A_norm, sigma / y_std)))
-        chi2_B_hist.append(float(loss_fn(params, x_B_norm, y_B_norm, sigma / y_std)))
+        params, model, x_mean, x_std, chi2_train_hist, chi2_val_hist = train_mlp(
+            x_train, y_train,
+            x_val, y_val,
+            hidden_layers=hidden_layers,
+            num_steps=num_steps,
+            sigma=sigma,
+            seed=base_seed + fold_idx
+        )
 
-    # === Predict on dense grid (normalized input, unnormalized output) ===
-    x_dense = jnp.linspace(0, 1, 500, dtype=jnp.float32).reshape(-1, 1)
-    x_dense_norm = (x_dense - x_mean) / x_std
-    y_pred_dense = predict_batch(params, x_dense_norm)
-    y_pred_dense = y_pred_dense * y_std + y_mean
+        chi2_train_list.append(chi2_train_hist[-1])
+        chi2_val_list.append(chi2_val_hist[-1])
 
-    return params, jnp.array(chi2_A_hist), jnp.array(chi2_B_hist), x_dense, y_pred_dense
+    return {
+        "chi2_train_mean": np.mean(chi2_train_list),
+        "chi2_val_mean": np.mean(chi2_val_list),
+        "chi2_train_std": np.std(chi2_train_list),
+        "chi2_val_std": np.std(chi2_val_list),
+    }
+
+
+def predict_on_grid(params, model, x_mean, x_std):
+    x_grid = jnp.linspace(0, 1, 500).reshape(-1, 1)
+    x_norm = (x_grid - x_mean) / x_std
+    y_pred = model.apply(params, x_norm)
+    return np.array(x_grid).flatten(), np.array(y_pred).flatten()

@@ -234,62 +234,79 @@ def plot_figure3_expectation_and_std_vs_degree(
 ## Plotting for Neural Network training
 # -----------------------------
 
-def plot_nn_fit_and_chi2(
-    x_sample, y_sample, sigma,
-    x_dense, y_dense,
-    chi2_A, chi2_B,
-    n_points,
-    steps,
-    max_m,
-    save_path="figures/nn_fit_and_chi2.png"
+def plot_nn_chi2_double_descent(
+    x_sample,
+    y_sample,
+    y_pred_dense,
+    chi2_train_list,
+    chi2_val_list,
+    complexities,
+    complexity_label="Width",
+    sigma=0.1,
+    savepath="figures/nn_fit_and_chi2.png"
 ):
-    fig, (ax1, ax2) = plt.subplots(
-        ncols=2,
-        figsize=(18, 8),
-        gridspec_kw={'width_ratios': [10, 9]}
-    )
+    import os
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from scipy.interpolate import interp1d
+    from src.truth_function import f_truth
+    from src.theory import chi2_theory_A, chi2_theory_B
 
-    # --- Left plot: NN fit on D_A ---
-    ax1.errorbar(x_sample, y_sample, yerr=sigma, fmt='o', alpha=0.5, label="Data A")
-    ax1.plot(x_dense, f_truth(x_dense), 'k--', label="Truth function")
-    ax1.plot(x_dense, y_dense, 'r-', label="NN fit")
-    ax1.set_title("NN Fit on Dataset A")
+    os.makedirs("figures", exist_ok=True)
+
+    # === Setup ===
+    N = len(x_sample)
+    truth_x = np.linspace(0, 1, 500)
+    x_dense = truth_x
+
+    chi2_train = np.array(chi2_train_list)
+    chi2_val = np.array(chi2_val_list)
+    complexities = np.array(complexities)
+
+    # Smooth empirical curves
+    interp_train = interp1d(complexities, chi2_train, kind='cubic')
+    interp_val = interp1d(complexities, chi2_val, kind='cubic')
+    complexity_dense = np.linspace(complexities[0], complexities[-1], 500)
+    chi2_train_smooth = interp_train(complexity_dense)
+    chi2_val_smooth = interp_val(complexity_dense)
+
+    # === Theory overlays ===
+    chi2_train_theory = chi2_theory_A(N, complexity_dense)
+    chi2_val_theory = chi2_theory_B(N, complexity_dense)
+
+    # === Plot ===
+    fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(19, 10), gridspec_kw={'width_ratios': [10, 9]})
+
+    # --- Left: NN Fit ---
+    ax1.errorbar(x_sample, y_sample, yerr=sigma, fmt='.', alpha=0.4, label="Sample A + noise")
+    ax1.plot(truth_x, f_truth(truth_x), 'k--', label="Truth function")
+    ax1.plot(x_dense, y_pred_dense, 'r-', label="NN fit")
+    ax1.set_xlim(0, 1)
+    ax1.set_ylim(bottom=0)
+    ax1.set_title("NN Fit to Sample A")
     ax1.set_xlabel("x")
     ax1.set_ylabel("y")
-    ax1.grid(True)
     ax1.legend()
+    ax1.grid(True)
 
-    # --- Right plot: χ² vs iteration ---
-    iterations = np.arange(len(chi2_A))
-    ax2.plot(iterations, chi2_A, 'b-', label=r"$\chi^2(D_A)$")
-    ax2.plot(iterations, chi2_B, 'r-', label=r"$\chi^2(D_B)$")
+    # --- Right: Chi^2 vs Complexity ---
+    ax2.plot(complexities, chi2_train, 'bo', label=r"$\chi^2_\mathrm{train}$")
+    ax2.plot(complexities, chi2_val, 'rs', label=r"$\chi^2_\mathrm{val}$")
+    ax2.plot(complexity_dense, chi2_train_smooth, 'b--')
+    ax2.plot(complexity_dense, chi2_val_smooth, 'r--')
 
-    # Overlay theory
-    chi2_A_theory = chi2_theory_A_step(n_points, iterations, steps, max_m)
-    chi2_B_theory = chi2_theory_B_step(n_points, iterations, steps, max_m)
-    var_A = chi2_variance_A_step(n_points, iterations, steps, max_m)
-    var_B = chi2_variance_B_step(n_points, iterations, steps, max_m)
+    # Theory overlays (width used as complexity)
+    ax2.plot(complexity_dense, chi2_train_theory, 'b:', linewidth=1.5, label=r"Theory: $N - m$")
+    ax2.plot(complexity_dense, chi2_val_theory, 'r:', linewidth=1.5, label=r"Theory: $N + m$")
 
-    ax2.plot(iterations, chi2_A_theory, 'b--', label="Theory $N - m_{eff}$")
-    ax2.plot(iterations, chi2_B_theory, 'r--', label="Theory $N + m_{eff}$")
-    ax2.fill_between(iterations,
-                     chi2_A_theory - np.sqrt(var_A),
-                     chi2_A_theory + np.sqrt(var_A),
-                     color='blue', alpha=0.2)
-    ax2.fill_between(iterations,
-                     chi2_B_theory - np.sqrt(var_B),
-                     chi2_B_theory + np.sqrt(var_B),
-                     color='red', alpha=0.2)
-
-    ax2.set_title(r"Training & Validation $\chi^2$ with Theory")
-    ax2.set_xlabel("Iteration")
+    ax2.set_title(r"Cross-Validated $\chi^2$ vs NN Width")
+    ax2.set_xlabel(f"Model Complexity ({complexity_label})")
     ax2.set_ylabel(r"$\chi^2$")
-    ax2.set_yscale("log")
-    ax2.grid(True, which="both", linestyle="--")
-    ax2.legend()
+    ax2.set_xlim(left=complexities[0], right=complexities[-1])
+    ax2.set_ylim(bottom=0)
+    ax2.grid(True, which="both", linestyle="--", alpha=0.6)
+    ax2.legend(loc='upper right')
 
-    fig.subplots_adjust(left=0.05, right=0.97, top=0.92, bottom=0.10, wspace=0.25)
-    os.makedirs(os.path.dirname(save_path), exist_ok=True)
-    fig.savefig(save_path, dpi=300)
-    plt.show()
-    plt.close(fig)
+    # Final layout
+    fig.subplots_adjust(left=0.05, right=0.98, top=0.92, bottom=0.10, wspace=0.25)
+    fig.savefig(savepath, dpi=300)
