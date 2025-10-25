@@ -10,12 +10,9 @@ from scipy.stats import pearsonr
 from src.fitting import fit_polynomial
 from src.truth_function import f_truth
 from src.utils import generate_data
-from src.theory import (
-    chi2_theory_A_step,
-    chi2_theory_B_step,
-    chi2_variance_A_step,
-    chi2_variance_B_step
-)
+from src.theory import chi2_theory_A, chi2_theory_B, chi2_theory_A_NN, chi2_theory_B_NN
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
 
 plt.rcParams.update({
     'font.size': 16,               # Master font size (affects most things)
@@ -231,7 +228,7 @@ def plot_figure3_expectation_and_std_vs_degree(
     plt.show()
 
 # -----------------------------
-## Plotting for Neural Network training
+# Plotting for Neural Network Cross-Validation and Double Descent
 # -----------------------------
 
 def plot_nn_chi2_double_descent(
@@ -245,68 +242,98 @@ def plot_nn_chi2_double_descent(
     sigma=0.1,
     savepath="figures/nn_fit_and_chi2.png"
 ):
-    import os
-    import numpy as np
-    import matplotlib.pyplot as plt
-    from scipy.interpolate import interp1d
-    from src.truth_function import f_truth
-    from src.theory import chi2_theory_A, chi2_theory_B
-
-    os.makedirs("figures", exist_ok=True)
-
-    # === Setup ===
+    """
+    Plot (1) NN fit to sample A, and (2) χ² vs model complexity with theoretical overlays.
+    Designed to highlight double descent behavior with minimal smoothing.
+    """
+    os.makedirs(os.path.dirname(savepath), exist_ok=True)
     N = len(x_sample)
-    truth_x = np.linspace(0, 1, 500)
-    x_dense = truth_x
+    x_dense = np.linspace(0, 1, 500)
+    truth_y = f_truth(x_dense)
 
     chi2_train = np.array(chi2_train_list)
-    chi2_val = np.array(chi2_val_list)
+    chi2_val   = np.array(chi2_val_list)
     complexities = np.array(complexities)
 
-    # Smooth empirical curves
-    interp_train = interp1d(complexities, chi2_train, kind='cubic')
-    interp_val = interp1d(complexities, chi2_val, kind='cubic')
-    complexity_dense = np.linspace(complexities[0], complexities[-1], 500)
-    chi2_train_smooth = interp_train(complexity_dense)
-    chi2_val_smooth = interp_val(complexity_dense)
+    # --- Light polynomial smoothing for visual continuity ---
+    def smooth_curve(x, y, degree=3, num_points=500):
+        """Mild smoothing: just enough to connect points, not erase oscillations."""
+        if len(x) < degree + 1:
+            return x, y
+        X = np.array(x).reshape(-1, 1)
+        poly = PolynomialFeatures(degree=degree)
+        X_poly = poly.fit_transform(X)
+        model = LinearRegression().fit(X_poly, y)
+        x_dense = np.linspace(np.min(x), np.max(x), num_points).reshape(-1, 1)
+        y_smooth = model.predict(poly.transform(x_dense))
+        return x_dense.flatten(), y_smooth
 
-    # === Theory overlays ===
-    chi2_train_theory = chi2_theory_A(N, complexity_dense)
-    chi2_val_theory = chi2_theory_B(N, complexity_dense)
+    complexity_dense, chi2_train_smooth = smooth_curve(complexities, chi2_train)
+    _,                  chi2_val_smooth = smooth_curve(complexities, chi2_val)
 
-    # === Plot ===
-    fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(19, 10), gridspec_kw={'width_ratios': [10, 9]})
+    # === Theoretical χ² curves using m_eff(width) mapping ===
+    chi2_train_theory = chi2_theory_A_NN(N, complexity_dense)
+    chi2_val_theory   = chi2_theory_B_NN(N, complexity_dense)
 
-    # --- Left: NN Fit ---
-    ax1.errorbar(x_sample, y_sample, yerr=sigma, fmt='.', alpha=0.4, label="Sample A + noise")
-    ax1.plot(truth_x, f_truth(truth_x), 'k--', label="Truth function")
-    ax1.plot(x_dense, y_pred_dense, 'r-', label="NN fit")
-    ax1.set_xlim(0, 1)
-    ax1.set_ylim(bottom=0)
-    ax1.set_title("NN Fit to Sample A")
-    ax1.set_xlabel("x")
-    ax1.set_ylabel("y")
-    ax1.legend()
-    ax1.grid(True)
+    # === Create figure ===
+    fig, (ax_fit, ax_chi2) = plt.subplots(
+        ncols=2, figsize=(18, 8), gridspec_kw={'width_ratios': [10, 9]}
+    )
 
-    # --- Right: Chi^2 vs Complexity ---
-    ax2.plot(complexities, chi2_train, 'bo', label=r"$\chi^2_\mathrm{train}$")
-    ax2.plot(complexities, chi2_val, 'rs', label=r"$\chi^2_\mathrm{val}$")
-    ax2.plot(complexity_dense, chi2_train_smooth, 'b--')
-    ax2.plot(complexity_dense, chi2_val_smooth, 'r--')
+    # ============================================
+    # (Left) Neural network fit
+    # ============================================
+    ax_fit.errorbar(
+        x_sample, y_sample, yerr=sigma,
+        fmt='.', color='gray', alpha=0.4, label="Noisy data"
+    )
+    ax_fit.plot(x_dense, truth_y, 'k--', lw=2, label="Truth function")
+    ax_fit.plot(x_dense, y_pred_dense, 'r-', lw=2, label="NN prediction")
 
-    # Theory overlays (width used as complexity)
-    ax2.plot(complexity_dense, chi2_train_theory, 'b:', linewidth=1.5, label=r"Theory: $N - m$")
-    ax2.plot(complexity_dense, chi2_val_theory, 'r:', linewidth=1.5, label=r"Theory: $N + m$")
+    ax_fit.set_xlim(0, 1)
+    ax_fit.set_ylim(bottom=0)
+    ax_fit.set_xlabel("x")
+    ax_fit.set_ylabel("y")
+    ax_fit.set_title("Neural Network Fit to Sample A")
+    ax_fit.legend(frameon=False, fontsize=11)
+    ax_fit.grid(True, alpha=0.4)
 
-    ax2.set_title(r"Cross-Validated $\chi^2$ vs NN Width")
-    ax2.set_xlabel(f"Model Complexity ({complexity_label})")
-    ax2.set_ylabel(r"$\chi^2$")
-    ax2.set_xlim(left=complexities[0], right=complexities[-1])
-    ax2.set_ylim(bottom=0)
-    ax2.grid(True, which="both", linestyle="--", alpha=0.6)
-    ax2.legend(loc='upper right')
+    # ============================================
+    # (Right) χ² vs model complexity
+    # ============================================
+    ax_chi2.fill_between(
+        complexities, chi2_train * 0.9, chi2_train * 1.1,
+        color='blue', alpha=0.1
+    )
+    ax_chi2.fill_between(
+        complexities, chi2_val * 0.9, chi2_val * 1.1,
+        color='red', alpha=0.1
+    )
 
-    # Final layout
-    fig.subplots_adjust(left=0.05, right=0.98, top=0.92, bottom=0.10, wspace=0.25)
+    # Empirical χ² points and mild smoothing
+    ax_chi2.semilogx(complexities, chi2_train, 'bo', alpha=0.7, label=r"$\chi^2_\mathrm{train}$ (empirical)")
+    ax_chi2.semilogx(complexities, chi2_val, 'rs', alpha=0.7, label=r"$\chi^2_\mathrm{val}$ (empirical)")
+    ax_chi2.plot(complexity_dense, chi2_train_smooth, 'b--', lw=2)
+    ax_chi2.plot(complexity_dense, chi2_val_smooth, 'r--', lw=2)
+
+    # Theoretical overlays (NN-adapted)
+    ax_chi2.plot(complexity_dense, chi2_train_theory, 'b:', lw=1.5,
+                 label=r"Theory: $\mathbb{E}[\chi^2_A]=N-m_\mathrm{eff}$")
+    ax_chi2.plot(complexity_dense, chi2_val_theory, 'r:', lw=1.5,
+                 label=r"Theory: $\mathbb{E}[\chi^2_B]=N+m_\mathrm{eff}$")
+
+    # Axes styling
+    ax_chi2.set_xscale("log")
+    ax_chi2.set_xlim(min(complexities), max(complexities))
+    ax_chi2.set_ylim(bottom=0)
+    ax_chi2.set_xlabel(f"Model Complexity ({complexity_label})")
+    ax_chi2.set_ylabel(r"$\chi^2$")
+    ax_chi2.set_title(r"Cross-Validated $\chi^2$ vs Neural Network Width")
+    ax_chi2.grid(True, which="both", linestyle="--", alpha=0.5)
+    ax_chi2.legend(loc="upper right", frameon=False, fontsize=11)
+
+    fig.tight_layout()
+    fig.subplots_adjust(wspace=0.28, top=0.90)
     fig.savefig(savepath, dpi=300)
+    plt.close(fig)
+    print(f"📊 Saved plot to {savepath}")

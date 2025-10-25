@@ -21,28 +21,20 @@ def chi2_variance_B(N, m):
     """Theoretical variance of chi^2 on test set (polynomial case)"""
     return 2 * (N + 3 * m)
 
-# === Neural Network Theory (with m_eff(step)) ===
-def m_eff_from_step(step, max_step, max_m):
+def m_eff_from_width(width, N, alpha=0.6, m_max_ratio=3.0):
     """
-    Define effective complexity m_eff as a function of training step.
-    Maps step in [0, max_step] → m_eff in [1, max_m].
-    Linear mapping for now, can be refined later.
+    Effective model complexity m_eff as a nonlinear function of network width.
+    For small widths, growth is sublinear; for large widths, it saturates around m_max_ratio * N.
     """
-    step = np.asarray(step)
-    return 1 + (max_m - 1) * (step / max_step)
+    width = np.asarray(width, dtype=float)
+    width_norm = width / np.max(width)
+    m_eff = N * m_max_ratio * (width_norm ** alpha) / (1 + width_norm ** alpha)
+    return m_eff
 
-def chi2_theory_A_step(N, step, max_step, max_m):
-    m_eff = m_eff_from_step(step, max_step, max_m)
+def chi2_theory_A_NN(N, width):
+    m_eff = m_eff_from_width(width, N)
     return N - m_eff
 
-def chi2_theory_B_step(N, step, max_step, max_m):
-    m_eff = m_eff_from_step(step, max_step, max_m)
+def chi2_theory_B_NN(N, width):
+    m_eff = m_eff_from_width(width, N)
     return N + m_eff
-
-def chi2_variance_A_step(N, step, max_step, max_m):
-    m_eff = m_eff_from_step(step, max_step, max_m)
-    return 2 * (N - m_eff)
-
-def chi2_variance_B_step(N, step, max_step, max_m):
-    m_eff = m_eff_from_step(step, max_step, max_m)
-    return 2 * (N + 3 * m_eff)
