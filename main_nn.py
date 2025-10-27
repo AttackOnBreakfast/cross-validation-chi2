@@ -1,106 +1,92 @@
 # -----------------------------
-# main_nn.py
-# Neural Network χ² Cross-Validation Sweep (Double Descent Demo)
+# src/nn_main.py
 # -----------------------------
+import os
 import numpy as np
 from tqdm import tqdm
-from src.data import generate_fit_sample
-from src.nn_model import kfold_mlp_chi2, train_mlp, predict_on_grid
-from src.plot import plot_nn_chi2_double_descent
+import torch
 
-
-# ===============================================
-# Configuration
-# ===============================================
-n_points = 300          # number of data points
-sigma = 0.3             # noise level
-seed = 42               # base random seed
-num_steps = 8000        # training iterations per model
-n_splits = 1            # keep raw interpolation peak (disable smoothing)
-n_trials = 2            # few trials for averaging, keeps runtime reasonable
-
-# Sweep over model capacity (hidden layer width)
-width_list = [
-    2, 4, 8, 16, 32, 64, 128, 256,
-    512, 1024, 2048, 4096
-]
-
-print(f"\n=== Neural Network Double Descent Experiment ===")
-print(f"Dataset: N={n_points}, σ={sigma:.2f}, steps={num_steps}, trials={n_trials}, CV={n_splits}-fold")
-print(f"Sweeping {len(width_list)} widths: {width_list}\n")
-
-
-# ===============================================
-# Generate one dataset (shared across all widths)
-# ===============================================
-x_sample, y_sample = generate_fit_sample(
-    n_points=n_points, sigma=sigma, seed=seed
+from src.data import generate_dataset_pair
+from src.truth_function import f_truth
+from src.nn_model import (
+    RFConfig,
+    train_on_A_ridgeless,
+    kfold_cv_on_B_with_fixed_model,
+    chi2,
+    param_count_rf,
 )
+from src.plot import plot_fit_and_double_descent
 
 
-# ===============================================
-# Width sweep with trial averaging
-# ===============================================
-chi2_train_means, chi2_val_means = [], []
+def main():
+    seed_base = 42
+    n_points = 300
+    sigma = 0.3
+    n_trials = 10
 
-for width in tqdm(width_list, desc="Width sweep", ncols=100):
-    chi2_train_tmp, chi2_val_tmp = [], []
+    cfg = RFConfig(activation="tanh")
+    print(f"Device: {cfg.device.upper()}  (random-features NN, ridgeless head)")
 
-    for trial in range(n_trials):
-        print(f"  ▶ Width={width:<4} | Trial={trial+1}/{n_trials} ...", end=" ", flush=True)
+    # Sweep the number of random features (this IS the parameter count, up to +1 for bias).
+    width_list = [2, 4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256, 384, 512, 768, 1024, 1536, 2048]
+    p_list = [param_count_rf(w) for w in width_list]
 
-        result = kfold_mlp_chi2(
-            x=x_sample,
-            y=y_sample,
-            hidden_layers=[width],
-            num_steps=num_steps,
-            sigma=sigma,
-            n_splits=n_splits,
-            base_seed=seed + trial * 123,
-        )
+    chi2_train_trials = []
+    chi2_val_trials = []
 
-        print("done.")
-        chi2_train_tmp.append(result["chi2_train_median"])
-        chi2_val_tmp.append(result["chi2_val_median"])
+    max_width = max(width_list)
+    for t in range(n_trials):
+        (x_A, y_A), (x_B, y_B) = generate_dataset_pair(n_points, sigma, seed_base + 101 * t)
 
-    chi2_train_means.append(np.mean(chi2_train_tmp))
-    chi2_val_means.append(np.mean(chi2_val_tmp))
+        # One fixed feature map per trial
+        torch.manual_seed(seed_base + t)
+        W_master = cfg.weight_scale * torch.randn(1, max_width, dtype=cfg.dtype, device=cfg.device)
+        b_master = cfg.bias_scale   * torch.randn(max_width, dtype=cfg.dtype, device=cfg.device)
 
-print("\n✅ Completed all widths successfully.\n")
+        chi2_train_list, chi2_val_list = [], []
+        for w in tqdm(width_list, desc=f"Trial {t+1}/{n_trials}"):
+            model, _ = train_on_A_ridgeless(x_A, y_A, w, cfg, seed=seed_base + t,
+                                        master_W=W_master, master_b=b_master)
+            yhat_A = model.predict(x_A)
+            chi2_A = chi2(y_A, yhat_A, sigma)
+            chi2_train_list.append(chi2_A)
+
+            cv_stats = kfold_cv_on_B_with_fixed_model(model, x_B, y_B, sigma,
+                                                    n_splits=5, shuffle=True, random_state=seed_base)
+            chi2_val_list.append(cv_stats["chi2_mean"])
+
+        chi2_train_trials.append(chi2_train_list)
+        chi2_val_trials.append(chi2_val_list)
+
+    chi2_train_mean = np.mean(chi2_train_trials, axis=0)
+    chi2_val_mean   = np.mean(chi2_val_trials, axis=0)
+
+    # Pick best width by CV mean for left-panel fit
+    best_idx = int(np.argmin(chi2_val_mean))
+    best_w = width_list[best_idx]
+
+    # Train once more on A for the left panel
+    (x_A, y_A), _ = generate_dataset_pair(n_points, sigma, seed_base)
+    model_best, _ = train_on_A_ridgeless(x_A, y_A, width=best_w, cfg=cfg, seed=seed_base)
+    x_dense = np.linspace(0, 1, 1000)
+    y_hat_dense = model_best.predict(x_dense)
+
+    os.makedirs("figures", exist_ok=True)
+    plot_fit_and_double_descent(
+        x_A=x_A,
+        y_A=y_A,
+        x_dense=x_dense,
+        y_hat_dense=y_hat_dense,
+        p_list=p_list,
+        chi2_train_list=chi2_train_mean,
+        chi2_cv_list=chi2_val_mean,
+        sigma=sigma,
+        savepath="figures/nn_double_descent.png",
+    )
+
+    print("\n[Done] Saved figures/nn_double_descent_random_features.png")
+    print(f"Best width (min ⟨χ²_val⟩): {best_w} (p={p_list[best_idx]})")
 
 
-# ===============================================
-# Final model (for visualization)
-# ===============================================
-final_width = width_list[-1]
-print(f"Training final model (width={final_width}) for visualization...")
-
-params, model, x_mean, x_std, _, _ = train_mlp(
-    x_train=x_sample.reshape(-1, 1),
-    y_train=y_sample.reshape(-1, 1),
-    x_val=x_sample.reshape(-1, 1),
-    y_val=y_sample.reshape(-1, 1),
-    hidden_layers=[final_width],
-    num_steps=num_steps,
-    sigma=sigma,
-    seed=seed,
-)
-
-x_dense, y_pred_dense = predict_on_grid(params, model, x_mean, x_std)
-
-
-# ===============================================
-# Plot results
-# ===============================================
-plot_nn_chi2_double_descent(
-    x_sample=x_sample,
-    y_sample=y_sample,
-    y_pred_dense=y_pred_dense,
-    chi2_train_list=chi2_train_means,
-    chi2_val_list=chi2_val_means,
-    complexities=width_list,
-    complexity_label="Width",
-    sigma=sigma,
-)
-
-print("\n📊 Plot saved successfully. Experiment complete.\n")
+if __name__ == "__main__":
+    main()
