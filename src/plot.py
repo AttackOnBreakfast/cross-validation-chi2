@@ -230,47 +230,63 @@ def plot_figure3_expectation_and_std_vs_degree(
 # -----------------------------
 
 def plot_fit_and_double_descent(
-    x_A: np.ndarray,
-    y_A: np.ndarray,
-    x_dense: np.ndarray,
-    y_hat_dense: np.ndarray,
-    p_list: Sequence[int],
-    chi2_train_list: Sequence[float],
-    chi2_cv_list: Sequence[float],
-    sigma: float,
-    savepath: str = "figures/nn_double_descent.png",
-) -> None:
-    os.makedirs(os.path.dirname(savepath), exist_ok=True)
+    x_A,
+    y_A,
+    x_dense,
+    y_hat_dense,
+    p_list,
+    chi2_train_list,
+    chi2_cv_list,
+    sigma,
+    savepath="figures/hybrid_multiple_descent.png",
+    combo_list=None,       # (m,w) pairs (optional, for grouped plotting)
+    grouped=False           # toggle True to show per-m curves
+):
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from src.truth_function import f_truth
 
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    fig, axs = plt.subplots(1, 2, figsize=(12, 4.5))
 
-    # Left: sample fit
-    ax = axes[0]
-    ax.scatter(x_A, y_A, s=12, alpha=0.6, label=f"Dataset A (N={len(x_A)}, σ={sigma})")
-    ax.plot(x_dense, f_truth(x_dense), lw=2.2, label="Truth $f(x)$", color="black")
-    ax.plot(x_dense, y_hat_dense, lw=2.0, label="NN (random features) fit", color="tab:orange")
-    ax.set_title("Sample fit with random-features NN")
-    ax.set_xlabel("x"); ax.set_ylabel("y")
-    ax.grid(True, ls="--", alpha=0.4)
-    ax.legend(loc="best", fontsize=9)
+    # ---- Left panel: sample fit
+    axs[0].scatter(x_A, y_A, s=12, alpha=0.5, label=f"Dataset A (σ = {sigma})")
+    axs[0].plot(x_dense, f_truth(x_dense), "k-", lw=2, label="Truth f(x)")
+    axs[0].plot(x_dense, y_hat_dense, color="orange", lw=2, label="Fit")
+    axs[0].set_xlabel("x"); axs[0].set_ylabel("y")
+    axs[0].set_title("Sample fit")
+    axs[0].legend()
 
-    # Right: χ² vs p (double descent)
-    ax2 = axes[1]
-    p_arr = np.asarray(p_list, dtype=int)
-    chi2_train = np.asarray(chi2_train_list, dtype=float)
-    chi2_cv    = np.asarray(chi2_cv_list, dtype=float)
+    # ---- Right panel: χ² curves
+    axs[1].set_xscale("log"); axs[1].set_yscale("log")
+    axs[1].set_xlabel("Total parameters p")
+    axs[1].set_ylabel(r"$χ^2$ (log scale)")
+    axs[1].set_title("Cross-validation")
 
-    ax2.plot(p_arr, chi2_train, marker="o", lw=1.8, label=r"$\langle \chi^2_{\mathrm{train}} \rangle$")
-    ax2.plot(p_arr, chi2_cv,    marker="o", lw=1.8, label=r"$\langle \chi^2_{\mathrm{CV}} \rangle$")
+    if not grouped:
+        # === MODE 1: single averaged curves (clean)
+        sort_idx = np.argsort(p_list)
+        p_sorted = np.array(p_list)[sort_idx]
+        chi2_train_sorted = np.array(chi2_train_list)[sort_idx]
+        chi2_cv_sorted    = np.array(chi2_cv_list)[sort_idx]
 
-    ax2.axvline(x=len(x_A), ls="--", color="gray", alpha=0.7, label="p ≈ N")
-    ax2.set_xscale("log")
-    ax2.set_xlabel("Number of random features (trainable params p)")
-    ax2.set_ylabel(r"$\chi^2$")
-    ax2.set_title("Cross-validation on B – Double Descent (Random Features)")
-    ax2.grid(True, ls="--", alpha=0.4)
-    ax2.legend(loc="best", fontsize=9)
+        axs[1].plot(p_sorted, chi2_train_sorted, "o-", lw=2, label=r"$⟨χ^2_{train}⟩$")
+        axs[1].plot(p_sorted, chi2_cv_sorted, "o-", lw=2, label=r"$⟨χ^2_{val}⟩$")
+    else:
+        # === MODE 2: grouped-by-m (multiple lines)
+        import itertools
+        if combo_list is None:
+            raise ValueError("grouped=True requires combo_list to be passed")
+        unique_m = sorted(set(m for m, _ in combo_list))
+        for m in unique_m:
+            idx = [i for i, (mm, _) in enumerate(combo_list) if mm == m]
+            p_sub = np.array(p_list)[idx]
+            val_sub = np.array(chi2_cv_list)[idx]
+            axs[1].plot(p_sub, val_sub, "o-", alpha=0.6, label=f"m = {m}")
 
-    fig.tight_layout()
-    fig.savefig(savepath, dpi=180, bbox_inches="tight")
-    print(f"[Saved] {savepath}")
+        axs[1].legend(title="Polynomial degree m", fontsize=9)
+
+    axs[1].axvline(len(x_A), color="gray", ls="--", label="p ≈ N")
+    axs[1].legend()
+    plt.tight_layout()
+    plt.savefig(savepath, dpi=300)
+    plt.close()
